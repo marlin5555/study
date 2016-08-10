@@ -35,7 +35,8 @@ ALS是一个计算密集型和通讯密集型的算法。近年来基于通用�
 两种集群上的评价矩阵输入都使用基于磁盘的HDFS，同时为溢出的中间结果、排序、hash表使用GCE上的local SSD。
 
 下图显示了Flink随着数据量增加其性能的扩展性，其中40个中等GCE机器的用蓝线表示，40个大GCE机器的用红线表示。对于小的数据集（4百万用户，50万商品），Flink可以在20分钟左右运行完ALS的10个迭代过程。对于完整的280亿的推荐（4千万用户，500万商品），Flink可以在5个小时30分钟结束这个作业。这意味着即使对于超大规模的评价任务，推荐模型仍可以每天重新算一次（也就是说这个计算时间代价可以保证模型能够及时更新）。
-![runtimeALS](./runtimeBlockedALS.png)
+
+![runtimeALS](./pics/runtimeBlockedALS.png)
 
 注意：虽然输入数据集（700GB）和低秩矩阵（即结果）（8.5GB和1.5GB）都是小于集群的内存总和的，但中间的结果（在user/item块间交换的向量和因子）却有几个TB大小。另外评价矩阵被拷贝了两份并进行了缓存-一份使用用户进行分区（partition），另一份使用商品进行分区（partition）。很多操作严重依赖鲁棒的shuffle过程、out-of-core性能、使用local SSD存储。
 
@@ -45,6 +46,7 @@ ALS是一个计算密集型和通讯密集型的算法。近年来基于通用�
 很多数据处理程序工作在大量的小记录上（数十亿记录，每条记录有几个字节），ALS工作在很少的记录上，但每个记录都很大（100MB）。我们给内部的排序算法添加了额外的代码路径，以支持内存可以高效地进行外排和归并大记录。
 - 流水线进行操作和排序（[Flink-658](https://issues.apache.org/jira/browse/FLINK-658)）
 创建矩阵信息block需要在大数据组（group）上运行reduce函数。Flink支持在reduce函数上流式处理group以避免收集所有的对象，这些对象集中起来会超过内存容量。我们对group stream上的对象在额外字段上的排序提供了很好的支持。
+
 - 对内存敏感的网络栈：
 我们调整了网络栈代码使得序列化记录时将其打散成frame用于网络转发，这可以确保子系统在同一时刻避免持有太多大对象。
 - 用户自定义分区（[Flink-1249](https://issues.apache.org/jira/browse/FLINK-1249)）
@@ -55,10 +57,10 @@ ALS是一个计算密集型和通讯密集型的算法。近年来基于通用�
 
 ##参考
 
-[Code for the algorithm implementation](https://github.com/tillrohrmann/flink-perf/blob/ALSJoinBlockingUnified/flink-jobs/src/main/scala/com/github/projectflink/als/ALSJoinBlocking.scala)
-[Introduction to matrix factorization for recommender models at the example of the Netflix Prize](http://www2.research.att.com/~volinsky/papers/ieeecomputer.pdf)
-[Mathematical formulation of the problem, formal description of the ALS algorithm, and background on Collaborative Filtering for Implicit Feedback Datasets](http://www.hpl.hp.com/personal/Robert_Schreiber/papers/2008%20AAIM%20Netflix/netflix_aaim08%28submitted%29.pdf)
-[Netflix in 2012 reported “more than 5 billion” ratings](http://techblog.netflix.com/2012/04/netflix-recommendations-beyond-5-stars.html)
+- [Code for the algorithm implementation](https://github.com/tillrohrmann/flink-perf/blob/ALSJoinBlockingUnified/flink-jobs/src/main/scala/com/github/projectflink/als/ALSJoinBlocking.scala)
+- [Introduction to matrix factorization for recommender models at the example of the Netflix Prize](http://www2.research.att.com/~volinsky/papers/ieeecomputer.pdf)
+- [Mathematical formulation of the problem, formal description of the ALS algorithm, and background on Collaborative Filtering for Implicit Feedback Datasets](http://www.hpl.hp.com/personal/Robert_Schreiber/papers/2008%20AAIM%20Netflix/netflix_aaim08%28submitted%29.pdf)
+- [Netflix in 2012 reported “more than 5 billion” ratings](http://techblog.netflix.com/2012/04/netflix-recommendations-beyond-5-stars.html)
 
 
 
