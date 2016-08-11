@@ -20,7 +20,7 @@ Posted on Mar 18th, 2015 by	[Till Rohrmann](http://data-artisans.com/author/till
 ALS是一个计算密集型和通讯密集型的算法。近年来基于通用数据处理框架的不同方式实现的ALS已经发布过很多。我们选择如下这种方式：对矩阵的子块（sub-block）进行操作，而这个被证明是显著降低了全局网络通讯代价。这也是[Apache Spark MLLib](https://github.com/apache/spark/blob/master/mllib/src/main/scala/org/apache/spark/mllib/recommendation/ALS.scala)中使用的实现方式。
 
 在Flink中，有关ALS迭代过程的数据流计划在下图中展示。我们在后续文章中将展示更多的细节信息以及实现ALS算法过程中的经验。实现的代码在[github](https://github.com/tillrohrmann/flink-perf/blob/ALSJoinBlockingUnified/flink-jobs/src/main/scala/com/github/projectflink/als/ALSJoinBlocking.scala)上是可以找到的，近期我们计划将这个算法贡献到Flink的机器学习算法套装中。
-![dataflow](./pics/blocked_algo_dataflow.svg)
+![dataflow](https://rawgit.com/marlin5555/study/master/flink/ref-dataArtisans/post-translate/pics/blocked_algo_dataflow.svg)
 
 ##在GCE上的实验
 
