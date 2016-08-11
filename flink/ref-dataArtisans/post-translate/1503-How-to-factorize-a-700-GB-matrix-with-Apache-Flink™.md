@@ -40,6 +40,7 @@ minX,Y∑rui exists(rui−xTuyi)2+λ(∑unu||xu||2+∑ini||yi||2)
 minX,Y∑rui exists(rui−xuTyi)2+λ(∑unu||xu||2+∑ini||yi||2)
 
 . X=(x1,…,xn)X=(x1,…,xn) is the matrix of user-factor vectors and Y=(y1,…,ym)Y=(y1,…,ym) is the matrix of item-factor vectors. nunu and nini denotes the number of existing ratings of user uu and item ii, respectively. According to Zhou et al., this weighted-λλ-regularization gives best empirical results. If we write this in matrix notation, then we easily see that we are actually looking for a low-rank matrix factorization of RR such that R=XTYR=XTY.
+![Alt text](https://rawgithub.com/potherca/StackOverflow/gh-pages/question.13808020.include-an-svg-hosted-on-github-in-markdown/controllers_brief.svg)
 
 ##问题的形式化描述
 
