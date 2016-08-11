@@ -9,7 +9,7 @@ Posted on Mar 18th, 2015 by	[Till Rohrmann](http://data-artisans.com/author/till
 在大数据处理应用中，推荐系统是一个十分成功的应用。其操作过程是将用户感兴趣的商品（item）推荐给TA可以视为是给用户提供服务，比如：Netflix上的一个新电影，Amazon上的一篇购物文章。推荐系统在提高用户体验角度上，已经成为web服务中的核心部分。
 
 推荐系统的一种功能强大的实现方式被称为“潜在因素模型--latent factor models”，[协同过滤技术](http://www.prem-melville.com/publications/recommender-systems-eml2010.pdf)的一个特例，它充分利用了用户偏好和商品特征之间的相似度：如果用户A和B是相似的，那么用户A喜欢的商品对于B来说是一个很好的推荐。这个潜在因素模型作为一项成功的技术被广泛的认知是由于Netflix Prize竞赛（综述看[这里](http://www2.research.att.com/~volinsky/papers/ieeecomputer.pdf)）。核心的步骤是计算稀疏评价矩阵的一个低秩分解，得到用户矩阵和商品矩阵：
-![factorization](./pics/factorization.svg)
+![factorization](https://rawgit.com/marlin5555/study/master/flink/ref-dataArtisans/post-translate/pics/factorization.svg)
 
 这个计算的结果是每个用户和商品的一系列因子，而这表达了用户和商品在某一围度的评价得分（有时这些维度可以与直观的概念进行一一对应，如电影/音乐的流派）。如果用户和商品在相同的因子上得分很高，那么用户很可能喜欢这个商品。
 

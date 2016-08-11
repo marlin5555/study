@@ -19,7 +19,7 @@ A powerful approach for implementing recommenders are the so called “latent fa
 
 推荐系统的一种功能强大的实现方式被称为“潜在因素模型--latent factor models”，[协同过滤技术](http://www.prem-melville.com/publications/recommender-systems-eml2010.pdf)的一个特例，它充分利用了用户偏好和商品特征之间的相似度：如果用户A和B是相似的，那么用户A喜欢的商品对于B来说是一个很好的推荐。这个潜在因素模型作为一项成功的技术被广泛的认知是由于Netflix Prize竞赛（综述看[这里](http://www2.research.att.com/~volinsky/papers/ieeecomputer.pdf)）。核心的步骤是计算稀疏评价矩阵的一个低秩分解，得到用户矩阵和商品矩阵：
 
-![factorization](./pics/factorization.svg)
+![factorization](https://rawgit.com/marlin5555/study/master/flink/ref-dataArtisans/post-translate/pics/factorization.svg)
 
 The result of this computation is a set of factors for each user and item that express how high the user and item score in a certain dimension (sometimes these dimension can be found to correlate with intuitive concepts, like movie/music genres). If a user and an item score high in the same factors, the user probably likes the item.
 
@@ -41,7 +41,7 @@ ALS是一个计算密集型和通讯密集型的算法。近年来基于通用�
 
 在Flink中，有关ALS迭代过程的数据流计划在下图中展示。我们在后续文章中将展示更多的细节信息以及实现ALS算法过程中的经验。实现的代码在[github](https://github.com/tillrohrmann/flink-perf/blob/ALSJoinBlockingUnified/flink-jobs/src/main/scala/com/github/projectflink/als/ALSJoinBlocking.scala)上是可以找到的，近期我们计划将这个算法贡献到Flink的机器学习算法套装中。
 
-![dataflow](./pics/blocked_algo_dataflow.svg)
+![dataflow](https://rawgit.com/marlin5555/study/master/flink/ref-dataArtisans/post-translate/pics/blocked_algo_dataflow.svg)
 
 ##Experiments on Google Compute Engine
 
