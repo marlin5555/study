@@ -30,7 +30,7 @@ One way to solve the problem of collaborative filtering are latent factor models
 
 ###潜在因素模型
 使用协同过滤的方式解决这个问题称之为[潜在因素模型](http://www2.research.att.com/~volinsky/papers/ieeecomputer.pdf)。它试图找到一个用户因子和商品因子，即向量![factor-vector](http://latex.codecogs.com/png.latex?x_u,y_i\in\mathbb%20R^f)，为每个用户u和商品i具有f个潜在因素，使得进行内积计算后即可以得到预测值![](http://latex.codecogs.com/png.latex?\hat{r}_{ui}%20=%20x_{u}^{T}y_i)。潜在因子是用户偏好和商品特征在抽象特征空间的一种描述。我们可以把那些变量想象成描述的是颜色、形状价格或者商品的流派。通常来说，潜在因子描述的抽象概念都是很难控制的（grasped）。
-
+<img src="http://www.forkosh.com/mathtex.cgi? \Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}">
 ##Problem formulation
 
 The following problem formulation is the summary of the work of [Zhou et al.](http://dx.doi.org/10.1007/978-3-540-68880-8_32) and [Hu et al.](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.167.5120) Given the matrix of user-item ratings ![](http://latex.codecogs.com/png.latex?R=(r_{ui})) with ![](http://latex.codecogs.com/png.latex?u%20\in%20[1...n]) and ![](http://latex.codecogs.com/png.latex?i\in[1...m]) where ![](http://latex.codecogs.com/png.latex?u%20\in%20[1...n]) and ![](http://latex.codecogs.com/png.latex?r_{ui}) represents the preference of user u for item i we can try to find the set of user- and item-factor vectors. It is noteworthy that R is intrinsically sparse because usually a user has only given feedback to a subset of all items. Therefore, we will only consider the rated items of every user to measure the performance of our latent factors model. By finding a model whose predictions are close to the actual ratings, we hope to be able to make predictions for unrated items.
