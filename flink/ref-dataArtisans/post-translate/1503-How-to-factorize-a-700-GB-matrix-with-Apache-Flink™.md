@@ -33,18 +33,58 @@ One way to solve the problem of collaborative filtering are latent factor models
 <img src="http://www.forkosh.com/mathtex.cgi? \Large x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}">
 ##Problem formulation
 
-The following problem formulation is the summary of the work of [Zhou et al.](http://dx.doi.org/10.1007/978-3-540-68880-8_32) and [Hu et al.](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.167.5120) Given the matrix of user-item ratings ![](http://latex.codecogs.com/png.latex?R=(r_{ui})) with ![](http://latex.codecogs.com/png.latex?u\\in[1...n]) and ![](http://latex.codecogs.com/png.latex?i\\in[1...m]) where ![](http://latex.codecogs.com/png.latex?u\\in[1...n]) and ![](http://latex.codecogs.com/png.latex?r_{ui}) represents the preference of user u for item i we can try to find the set of user- and item-factor vectors. It is noteworthy that R is intrinsically sparse because usually a user has only given feedback to a subset of all items. Therefore, we will only consider the rated items of every user to measure the performance of our latent factors model. By finding a model whose predictions are close to the actual ratings, we hope to be able to make predictions for unrated items.
+The following problem formulation is the summary of the work of [Zhou et al.](http://dx.doi.org/10.1007/978-3-540-68880-8_32) and [Hu et al.](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.167.5120) Given the matrix of user-item ratings ![](http://latex.codecogs.com/png.latex?R=%28r_{ui}%29) with ![](http://latex.codecogs.com/png.latex?u\\in[1...n]) and ![](http://latex.codecogs.com/png.latex?i\\in[1...m]) where ![](http://latex.codecogs.com/png.latex?u\\in[1...n]) and ![](http://latex.codecogs.com/png.latex?r_{ui}) represents the preference of user u for item i we can try to find the set of user- and item-factor vectors. It is noteworthy that R is intrinsically sparse because usually a user has only given feedback to a subset of all items. Therefore, we will only consider the rated items of every user to measure the performance of our latent factors model. By finding a model whose predictions are close to the actual ratings, we hope to be able to make predictions for unrated items.
 
 Retrieving a suitable model boils down to a minimization problem of the root-mean-square error (RMSE) between existing ratings and their predicted values plus some regularization term to avoid overfitting:
-minX,Y∑rui exists(rui−xTuyi)2+λ(∑unu||xu||2+∑ini||yi||2)
-minX,Y∑rui exists(rui−xuTyi)2+λ(∑unu||xu||2+∑ini||yi||2)
+![](http://latex.codecogs.com/png.latex?\\min_{X,Y}\\sum_{r_{ui}\\text{exists}}\\left%28r_{ui}-x_u^Ty_i\\right%29^2+\\lambda\\left%28\\sum_{u}n_u||x_{u}||^2+\sum_{i}n_i||y_{i}||^2\\right%29)
 
-. X=(x1,…,xn)X=(x1,…,xn) is the matrix of user-factor vectors and Y=(y1,…,ym)Y=(y1,…,ym) is the matrix of item-factor vectors. nunu and nini denotes the number of existing ratings of user uu and item ii, respectively. According to Zhou et al., this weighted-λλ-regularization gives best empirical results. If we write this in matrix notation, then we easily see that we are actually looking for a low-rank matrix factorization of RR such that R=XTYR=XTY.
-![Alt text](https://rawgithub.com/potherca/StackOverflow/gh-pages/question.13808020.include-an-svg-hosted-on-github-in-markdown/controllers_brief.svg)
+.![](http://latex.codecogs.com/png.latex?X=%28x_1,\\ldots,x_n%29)is the matrix of user-factor vectors and ![](http://latex.codecogs.com/png.latex?Y=%28y_1,\\ldots,y_m%29) is the matrix of item-factor vectors. ![](http://latex.codecogs.com/png.latex?n_u) and ![](http://latex.codecogs.com/png.latex?n_i) denotes the number of existing ratings of user u and item i, respectively. According to [Zhou et al.](http://dx.doi.org/10.1007/978-3-540-68880-8_32), this weighted-λ-regularization gives best empirical results. If we write this in matrix notation, then we easily see that we are actually looking for a low-rank matrix factorization of RR such that ![](http://latex.codecogs.com/png.latex?R=X^TY).
+
 
 ##问题的形式化描述
 
+下面有关问题形式化描述的内容摘要自 [Zhou et al.](http://dx.doi.org/10.1007/978-3-540-68880-8_32) and [Hu et al.](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.167.5120)的相关工作。给定用户-商品的评价矩阵![](http://latex.codecogs.com/png.latex?R=%28r_{ui}%29)其中 ![](http://latex.codecogs.com/png.latex?u\\in[1...n]) 、![](http://latex.codecogs.com/png.latex?i\\in[1...m])，而![](http://latex.codecogs.com/png.latex?r_{ui})代表了用户u对商品i的偏爱，我们可以尝试从中发现用户和商品的特征向量。值得注意的是R本质上是稀疏的，因为通常境况下用户只能给出所有商品一个子集的反馈意见。因此，我们只使用每个用户评价过的商品对我们的潜在因素模型进行效果度量。我们要找的模型，其预测值应当与实际评价尽量接近，我们希望使用这个预测模型给没有评价的商品进行预测。
+获取一个合适的模型归纳起来是一个最小化均方根误差（RMSE）的问题，该误差描述了当前评价与模型预测值之间的差异，并公国一些正则化项以避免过拟合：
+![](http://latex.codecogs.com/png.latex?\\min_{X,Y}\\sum_{r_{ui}\\text{exists}}\\left%28r_{ui}-x_u^Ty_i\\right%29^2+\\lambda\\left%28\\sum_{u}n_u||x_{u}||^2+\sum_{i}n_i||y_{i}||^2\\right%29)
+其中![](http://latex.codecogs.com/png.latex?X=%28x_1,\\ldots,x_n%29)是用户特征向量矩阵，![](http://latex.codecogs.com/png.latex?Y=%28y_1,\\ldots,y_m%29)是商品特征向量矩阵。 ![](http://latex.codecogs.com/png.latex?n_u) and ![](http://latex.codecogs.com/png.latex?n_i)代表了用户u和商品i已存在的评价数量。根据[Zhou et al.](http://dx.doi.org/10.1007/978-3-540-68880-8_32)的描述，加权的正则化系数λ应该通过最佳实践获得。如果我们使用矩阵的记号对其书写，可以很容易看到我们实际上寻找的是R的低秩矩阵分解，并使得 ![](http://latex.codecogs.com/png.latex?R=X^TY)。
+
+By fixing one of the sought-after matrices we obtain a quadratic form which can be easily minimized with respect to the remaining matrix. If this step is applied alternately to both matrices we can guarantee that for each step we converge closer to the solution. This method is called alternating least squares (ALS). If we fix the item-factor matrix and solve for the user-factor matrix we obtain the following equation which we have to solve for each user-factor vector:
+
+通过固定其中一个矩阵（较好的），我们可以获得有关剩下矩阵的一个二次方程形式，而这是容易最小化的。如果在两个矩阵上交替执行这个步骤，我们可以保证每一步都是收敛地接近答案。这个方法被称之为交替最小二乘法（ALS）。如果我们固定商品特征矩阵，并对用户特征矩阵求解，我们可以为得到下面的公式，而这个就是我们要为每个用户特征向量求解的：
+![](http://latex.codecogs.com/png.latex?x_{u}=\\left%28YS^uY^T+\\lambda%20n_u%20I\\right%29^{-1}Yr_u^T)
+
+with ![](http://latex.codecogs.com/png.latex?r_u) being the rating vector of user u (the uth row vector of R) and ![](http://latex.codecogs.com/png.latex?S^u\\in\\mathbb{R}^{m\\times%20m}) is the diagonal matrix where
+![](http://latex.codecogs.com/png.latex?S^u_{ii}=\\begin{cases}1&\\text{if%20}r_{ui}\\not=0\\\\0&\\text{else}\\end{cases})
+
+. For the sake of simplicity we set ![](http://latex.codecogs.com/png.latex?A_u=YS^uY^T+\\lambda%20n_uI) and ![](http://latex.codecogs.com/png.latex?V_u=Yr_u^T). The item-factor vectors can be calculated in a similar fashion:
+
+![](http://latex.codecogs.com/png.latex?y_{i}=\\left%28XS^iX^T+\\lambda%20n_iI\\right%29^{-1}Xr^i)
+
+with ![](http://latex.codecogs.com/png.latex?r^i) being the rating vector of item i (iith column vector of R) and ![](http://latex.codecogs.com/png.latex?S^i\\in\\mathbb{R}^{n\times%20n}) is the diagonal matrix where
+![](http://latex.codecogs.com/png.latex?S^i_{uu}=\\begin{cases}1&\\text{if%20}r_{ui}\\not=0\\\\0&\\text{else}\end{cases})
+
+. Again we can simplify the equation by ![](http://latex.codecogs.com/png.latex?A_i=XS^iX^T+\\lambda%20n_iI) and ![](http://latex.codecogs.com/png.latex?V_i=Xr^i).
 
 
+其中，![](http://latex.codecogs.com/png.latex?r_u)是用户u的评价向量（也就是R的第u行向量），![](http://latex.codecogs.com/png.latex?S^u\\in\\mathbb{R}^{m\\times%20m})是对角线矩阵，其中
+
+![](http://latex.codecogs.com/png.latex?S^u_{ii}=\\begin{cases}1&\\text{if%20}r_{ui}\\not=0\\\\0&\\text{else}\\end{cases})
+
+为了简单起见，我们假设![](http://latex.codecogs.com/png.latex?A_u=YS^uY^T+\\lambda%20n_uI) 、![](http://latex.codecogs.com/png.latex?V_u=Yr_u^T)。商品特征向量可以通过类似的方式计算：
+
+![](http://latex.codecogs.com/png.latex?y_{i}=\\left%28XS^iX^T+\\lambda%20n_iI\\right%29^{-1}Xr^i)
+
+其中![](http://latex.codecogs.com/png.latex?r^i)是商品i的评价向量（也就是R的第i列向量），![](http://latex.codecogs.com/png.latex?S^i\\in\\mathbb{R}^{n\times%20n})是对角线矩阵，其中
+
+![](http://latex.codecogs.com/png.latex?S^i_{uu}=\\begin{cases}1&\\text{if%20}r_{ui}\\not=0\\\\0&\\text{else}\end{cases})
+
+并且我们使用简化的![](http://latex.codecogs.com/png.latex?A_i=XS^iX^T+\\lambda%20n_iI) 、 ![](http://latex.codecogs.com/png.latex?V_i=Xr^i)。
+
+Since we want to factorize rating matrices which are so big that they no longer fit into the main memory of a single machine, we have to solve the problem in parallel. Furthermore, the ALS computation is inherently iterative, consisting of a series of optimization steps. Apache Flink constitutes an excellent fit for this task, since it offers an expressive API combined with support for iterations. An in-depth description of Apache Flink’s programming API can be found here.
+
+The rating matrix RR is sparse and consequently we should represent it as a set of tuples (rowIndex, columnIndex, entryValue). The resulting user-factor and item-factor matrices will be dense and we represent them as a set of column vectors (columnIndex, columnVector). If we want to distribute the rating and user/item matrices, we can simply use Flink’s DataSet, which is the basic abstraction to represent distributed data. Having defined the input and output types, we can look into the different implementations of ALS.
+
+因为我们希望因式分解的评价矩阵太大，以至于在一台机器的内存中都不能够放下，我们不得不并行化解决这个问题。更进一步，ALS的计算从本质上说是迭代的，包含一些列的求取最优化的步骤。Apache Flink对于这类任务是十分合适的，因为它提供很强表达能力的API，它可以很好地支持迭代过程。Apache Flink的编程API的深入描述参照[这里](http://flink.apache.org/docs/0.8/programming_guide.html)。
+评价矩阵R是稀疏的，因此我们应该使用如下的tuple集合来表达这个矩阵（rowIndex，columnIndex，entryValue）。作为结果的用户特征和商品特征矩阵将是稠密的，我们将它们表述成列向量的集合（columnIndex，columnVector）。如果我们希望将评价矩阵和用户/商品矩阵分布式处理，可以使用Flink的DataSet，它是分布式数据的一个基本抽象表达。在定义好输入输出类型后，我们可以深入ALS的具体实现。
 
 
