@@ -93,11 +93,11 @@ The figure shows the average throughput as a percentage of the maximum attained 
 
 该图展示平均吞吐量于最大吞吐量的比值（我们在单个JVM中达到了800万每秒最大吞吐值），其中生产（黄色）和消费（绿色）的任务随时间变换图。为了测量平均吞吐，我们每5秒测量一次通过任务的记录数。
 
-![backpressure-experiment-small](backpressure-experiment-small.png)
+![backpressure-experiment-small](./pics/backpressure-experiment-small.png)
 
 First, we run the producing task at 60% of its full speed (we simulate slow-downs via Thread.sleep() calls). The consumer processes data at the same speed without being slowed down artificially. We then slow down the consuming task to 30% its full speed. Here, the backpressure effect comes into play, as we see the producer also naturally slowing down to 30% of its full speed. We then stop the artificial slow down of the consumer, and both tasks reach their maximum throughput. We slow down the consumer again to 30% of its full speed, and the pipeline immediately reacts with the producer slowing down to 30% its full speed as well. Finally, we stop the slow-down again, and both tasks continue at 100% their full speed. All in all, we see that producer and consumer follow each other’s throughput in the pipeline, which is the desired behavior in a streaming pipeline.
 
-首先，我们以全速的60%运行生产者任务（我们模拟降速通过Thread.sleep()调用来实现）。消费者以相同的速度消费数据而不会人为减慢速度。接下来jiang'du
+首先，我们以全速的60%运行生产者任务（我们模拟降速通过Thread.sleep()调用来实现）。消费者以相同的速度消费数据而不会人为减慢速度。接下来
 
 ## Summary
 
