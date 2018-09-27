@@ -97,8 +97,12 @@ The figure shows the average throughput as a percentage of the maximum attained 
 
 First, we run the producing task at 60% of its full speed (we simulate slow-downs via Thread.sleep() calls). The consumer processes data at the same speed without being slowed down artificially. We then slow down the consuming task to 30% its full speed. Here, the backpressure effect comes into play, as we see the producer also naturally slowing down to 30% of its full speed. We then stop the artificial slow down of the consumer, and both tasks reach their maximum throughput. We slow down the consumer again to 30% of its full speed, and the pipeline immediately reacts with the producer slowing down to 30% its full speed as well. Finally, we stop the slow-down again, and both tasks continue at 100% their full speed. All in all, we see that producer and consumer follow each other’s throughput in the pipeline, which is the desired behavior in a streaming pipeline.
 
-首先，我们以全速的60%运行生产者任务（我们模拟降速通过Thread.sleep()调用来实现）。消费者以相同的速度消费数据而不会人为减慢速度。接下来
+首先，我们以全速的60%运行生产者任务（我们模拟降速通过Thread.sleep()调用来实现）。消费者以相同的速度消费数据而不会人为减慢速度。接下来，将消费task的速度降到全速的30%。这里，背压效果显现出来，可以看到生产者也自然地降到了全速的30%。接下来，停止在消费者的人为降速，两个task都达到了它们的最大吞吐。再次将消费者的速度降到全速的30%，管道（pipeline）立即作出反应，生产者的速度也降到全速的30%。最终，再次停止人为降速，两个task继续以100%的全速运行。综上所述，观察到的生产者和消费者在管道中对对方的吞吐都有依赖，这在流管道场景下是最佳表现。
 
 ## Summary
 
+## 总结
+
 Flink, together with a durable source like Kafka, gets you immediate backpressure handling for free without data loss. Flink does not need a special mechanism for handling backpressure, as data shipping in Flink doubles as a backpressure mechanism. Thus, Flink achieves the maximum throughput allowed by the slowest part of the pipeline.
+
+Flink，与可持久化源（如Kafka）的组合，使得系统可以对背压立即做出响应，并免于丢失数据。Flink在处理背压时并不需要特殊的机制，因为在Flink进行数据发送的过程中兼具了背压机制。这使得，Flink在管道化的运行中可以达到最慢部分（slowest part）的最大吞吐（maximum throughput）。
