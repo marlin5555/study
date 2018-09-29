@@ -103,7 +103,7 @@ join操作将产生一个元组：由用户id ![](http://latex.codecogs.com/png.
 The Flink code for one iteration step looks the following:
 
 在一个迭代过程中的Flink代码如下：
-
+```
 	// Generate tuples of items with their ratings
 	val uVA = items.join(ratings).where(0).equalTo(1) {
 		(item, ratingEntry) => {
@@ -119,7 +119,7 @@ The Flink code for one iteration step looks the following:
 			val matrix = FloatMatrix.zeros(factors, factors)
 			val vector = FloatMatrix.zeros(factors)
 			var n = 0
-		
+
 			for((id, rating, v) <- vectors) {
 				uID = id
 				vector += rating * v
@@ -130,11 +130,11 @@ The Flink code for one iteration step looks the following:
 			for(idx <- 0 until factors) {
 				matrix(idx, idx) += lambda * n
 			}
-		
+
 			new Factors(uID, Solve(matrix, vector))
 		}
 	}
-
+```
 This ALS implementation successfully computes the matrix factorization for all tested input sizes. However, it is far from optimal, since the algorithm creates for each user who rates an item i a copy of the item vector yi. If for example, several users which reside on one node have rated the same item, then each of them will receive their own copy of the item vector. Depending on the structure of the rating matrix, this can cause some serious network traffic which degrades the overall performance. A better solution which mitigates this problem will be presented in act III.
 
 ALS为所有输入成功计算出矩阵的分解结果。但是，它远没有进行优化，因为算法中为对商品![](http://latex.codecogs.com/png.latex?i)进行评价的每个用户都创建了一个商品向量![](http://latex.codecogs.com/png.latex?y_i)的拷贝。如果在同一台机器上处理的几个用户都评价了相同的商品，那么每个都会收到这个商品向量的一份拷贝。依赖于评价矩阵的结构，这可以引起非常严重的网络问题，而这对将严重影响整体性能表现。一个相对好点解决这个问题的方法将会在下面的Act II中展示。
@@ -201,17 +201,3 @@ The partial update messages are grouped according to their user block ubub and j
 在计算了这些元信息并将用户和商品矩阵分块后，可以讨论ALS迭代步骤的实际工作过程了。这个迭代过程事实上与原始的实现是很像的，唯一的区别是我们在用户和商品块上进行操作。第一步，需要为每个用户块产生部分更新信息。这可以通过商品块矩阵和出边信息进行join就可以计算出这些信息。每个商品块![](http://latex.codecogs.com/png.latex?ib)出边信息包含的内容有如下作用：为每个用户块![](http://latex.codecogs.com/png.latex?ub)和![](http://latex.codecogs.com/png.latex?ib)中的商品向量产生部分更新信息。
 
 这些部分更新信息可以利用用户块![](http://latex.codecogs.com/png.latex?ub)进行分组，并和入边用户信息进行join。这个分组（group）和join可以通过coGroup操作符实现，这可以避免构建包含全部部分更新信息的大对象。相应地，我们充分利用Flink的流处理能力，在coGroup函数中处理完一个部分更新信息就可以处理下一个。这个coGroup函数负责为用户块中的每个用户![](http://latex.codecogs.com/png.latex?u)构建一个矩阵![](http://latex.codecogs.com/png.latex?A_u)。这可以通过将当前处理的商品向量![](http://latex.codecogs.com/png.latex?y_i)增量累加获得，
-
-
-
-
-
-
-
-
-
-
-
-
-
-
