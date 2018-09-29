@@ -78,21 +78,31 @@ When a task receives a new user action, it evaluates the currently active patter
 
 After the first three actions are processed, the next event, the logout action of User 1001, is shipped to the task that processes the events of User 1001. When the task receives the actions, it looks up the current pattern from the broadcast state and the previous action of User 1001. Since the pattern matches both actions, the task emits a pattern match event. Finally, the task updates its keyed state by overriding the previous event with the latest action.
 
-
+在第一批三个操作被处理后，接下来的事件是用户1001的注销事件，它将被传送到处理用户1001对应事件的任务（task）上。当任务接收到这个操作，它将从广播状态中查找当前的模式以及用户1001的前一个操作。由于模式匹配上了这个两个操作，任务将发射一个模式匹配的事件。最后，任务更新它自身的键值状态，使用最新的操作覆盖掉前一个操作。
 
 ![](./pics/an-e-commerce-website-update-rule.png)
 
 When a new pattern arrives in the pattern stream, it is broadcasted to all tasks and each task updates its broadcast state by replacing the current pattern with the new one.
 
+当模式流中，新模式到达时，它将被广播到所有任务（task），每个任务通过新模式代替当前模式，更新它自身的广播状态。
+
 ![](./pics/an-e-commerce-website-new-pattern.png)
 
 Once the broadcast state is updated with a new pattern, the matching logic continues as before, i.e., user action events are partitioned by key and evaluated by the responsible task.
 
+一旦广播状态更新成新模式，匹配的逻辑就像之前一样继续，也就是说，用户操作事件通过键（key）进行分区（partition），对应的任务（task）进行评价。
+
 ## How to Implement an Application with Broadcast State?
+
+## 如何实现带广播状态的应用程序？
 
 Until now, we conceptually discussed the application and explained how it uses broadcast state to evaluate dynamic patterns over event streams. Next, we’ll show how to implement the example application with Flink’s DataStream API and the broadcast state feature.
 
+到目前为止，我们在概念层面讨论了应用程序，并解释了它如何使用广播状态在事件流上进行动态模式评价。接下来，我们将展示样例程序来说明如何通过Flink的DataStream API和广播状态特性进行编程实现。
+
 Let’s start with the input data of the application. We have two data streams, actions, and patterns. At this point, we don’t really care where the streams come from. The streams could be ingested from Apache Kafka or Kinesis or any other system.
+
+让我们从应用程序的输入数据开始。有两个数据流，分别是操作（action）和模式（pattern）。当前，我们并不关心流从哪里来。它可以从Apache Kafka、Kinesis或任何其他系统中抽取过来。
 
 ```
 
@@ -105,7 +115,13 @@ Action and Pattern are Pojos with two fields each:
 - Action: Long userId, String action
 - Pattern: String firstAction, String secondAction
 
+操作和模式作为Pojo各自有两个字段（field）如下所示：
+- 操作（Action）：Long型的userId，String型的action
+- 模式（Pattern）：String型的firstAction，String型的secondAction
+
 As a first step, we key the action stream on the userId attribute.
+
+做为第一步，我们指定操作流的键为userId属性。
 
 ```java
 KeyedStream<Action, Long> actionsByUser = actions
@@ -113,6 +129,8 @@ KeyedStream<Action, Long> actionsByUser = actions
 ```
 
 Next, we prepare the broadcast state. Broadcast state is always represented as MapState, the most versatile state primitive that Flink provides.
+
+接下来，准备广播状态。广播状态始终表现成一个MapState，这是Flink提供的最通用的状态基础类型（primitive）。
 
 ```java
 MapStateDescriptor<Void, Pattern> bcStateDescriptor =
@@ -122,11 +140,15 @@ MapStateDescriptor<Void, Pattern> bcStateDescriptor =
 
 Since our application only evaluates and stores a singlePattern at a time, we configure the broadcast state as a MapState with key type Void and value type Pattern. The Pattern is always stored in the MapState with null as key.
 
+由于我们的应用程序一次仅评价和存储单一模式（singlePattern），因此如下配置广播状态：将MapState的key配成Void类型，value配成Pattern类型。这个Pattern始终存储在MapState的null键对应的位置。
+
 ```java
 BroadcastStream<Pattern> bcedPatterns = patterns.broadcast(bcStateDescriptor);
 ```
 
 Using the MapStateDescriptor for the broadcast state, we apply the broadcast() transformation on the patterns stream and receive a BroadcastStream bcedPatterns.
+
+使用MapStateDescriptor做为广播状态，在模式流上应用broadcast()转换，其接收BroadcastStream类型的参数bcStateDescriptor。
 
 ```java
 DataStream<Tuple2<Long, Pattern>> matches = actionsByUser
@@ -135,6 +157,8 @@ DataStream<Tuple2<Long, Pattern>> matches = actionsByUser
 ```
 
 After we obtained the keyed actionsByUser stream and the broadcasted bcedPatterns stream, we connect() both streams and apply a PatternEvaluator on the connected streams. PatternEvaluator is a custom function that implements the KeyedBroadcastProcessFunction interface. It applies the pattern matching logic that we discussed before and emits Tuple2<Long, Pattern> records which contain the user id and the matched pattern.
+
+在获得了指定键值的actionByUser流和设置广播的bcedPatterns流后，通过connect()操作将两个流连接在一起，并在连接后的流上应用PatternEvaluator。其中PatternEvaluator是一个用户自定义函数，它实现了KeyedBroadcastProcessFunction接口。它实现了前面讨论过的模式匹配的逻辑，并发射Tuple2<Long, Pattern>类型的记录，其中包含了用户ID和匹配的模式。
 
 ```java
 public static class PatternEvaluator
@@ -198,9 +222,16 @@ public static class PatternEvaluator
 
 The KeyedBroadcastProcessFunction interface provides three methods to process records and emit results.
 
+KeyedBroadcastProcessFunction接口提供了三个方法来处理（process）记录和发射（emit）结果。
+
 - processBroadcastElement() is called for each record of the broadcasted stream. In our PatternEvaluator function, we simply put the received Pattern record in to the broadcast state using the null key (remember, we only store a single pattern in the MapState).
 - processElement() is called for each record of the keyed stream. It provides read-only access to the broadcast state to prevent modification that result in different broadcast states across the parallel instances of the function. The processElement() method of the PatternEvaluator retrieves the current pattern from the broadcast state and the previous action of the user from the keyed state. If both are present, it checks whether the previous and current action match with the pattern and emits a pattern match record if that is the case. Finally, it updates the keyed state to the current user action.
 - onTimer() is called when a previously registered timer fires. Timers can be registered in any of the processing methods and are used to perform computations or to clean up state in the future. We did not implement this method in our example to keep the code concise. However, it could be used to remove the last action of a user when the user was not active for a certain period of time to avoid growing state due to inactive users.
+
+- processBroadcastElement() 广播流上会针对每条记录都调用此方法。在我们实现的PatternEvaluator函数中，将接收到的Pattern记录放到广播状态中，通过null键进行更新（由于我们在MapState中仅存储了一个模式）。
+- processElement() 在指定键的流上会针对每条记录都调用此方法。它提供了以只读模式访问广播状态的途径，这阻止了可能的修改，而带来在并行的函数实例上存在不同的广播状态。PatternEvaluator的processElement()方法从broadcast状态中检索当前模式，从keyed状态中检索用户的上一个操作。如果两者都存在，将检查前一个操作和当前操作是否匹配模式，在匹配的秦光霞将发射一个模式匹配记录。最后，它把keyed状态更新成当前用户操作。
+- onTimer() 当之前注册的计时器出发时将调用此方法。触发器可以注册在任何处理方法中，用来执行计算或将来清理状态。在此示例中为保持代码简洁，我们没有实现这个方法。但是，当用户在一段时间内不再活跃（active）时，通过这个方法可以移除该用户的最后一个操作，这将避免因不活跃用户累积带来的状态增长。
+
 
 You might have noticed the context objects of the KeyedBroadcastProcessFunction’s processing method. The context objects give access to additional functionality such as
 - The broadcast state (read-write or read-only, depending on the method),
@@ -208,10 +239,20 @@ You might have noticed the context objects of the KeyedBroadcastProcessFunction�
 - The current key (only available in processElement()), and
 - A method to apply a function the keyed state of each registered key (only available in processBroadcastElement())
 
+你可能已经注意到了KeyedBroadcastProcessFunction的处理方法中的context对象。context对象提供了对其他功能的访问，如：
+- 广播状态（读写或只读模式，取决于处理方法）
+- TimerService，它提供了对记录时间戳、当前的watermark的访问，还可以在其中注册定时器
+- 当前的key（仅在processElement()方法中可用）
+- 为keyed state每个注册过的键（key）应用函数的方法（只在processBroadcastElement()中可用）
+
 The KeyedBroadcastProcessFunction has full access to Flink state and time features just like any other ProcessFunction and hence can be used to implement sophisticated application logic. Broadcast state was designed to be a versatile feature that adapts to different scenarios and use cases. Although we only discussed a fairly simple and restricted application, you can use broadcast state in many ways to implement the requirements of your application.
+
+KeyedBroadcastProcessFunction 可以完全访问Flink的状态和time特性，这就像任何其他ProcessFunction一样，因此它可以用于实现复杂的应用程序逻辑。广播状态被设计成更通用的特性，以适应不同场景和用例。虽然我们仅仅讨论了一个十分简单并且受限的应用，但你可以通过多种方式使用广播状态，来实现应用程序中的需求。
 
 ## Conclusion
 
+## 结论
+
 In this blog post, we walked you through an example application to explain what Apache Flink’s broadcast state is and how it can be used to evaluate dynamic patterns on event streams. We’ve also discussed the API and showed the source code of our example application.
 
-We invite you to check the documentation on the Apache Flink website and provide feedback or suggestions for further improvements through the Apache Flink mailing list.
+在这篇博客中，我们走读了样例程序，借此解释了Apache Flink中的广播状态是什么、它如何在事件流上进行动态模式评价。并且我们还讨论了API并展示了样例程序的源码。
