@@ -116,17 +116,25 @@ The limitations of the current version are acceptable for applications that emit
 
 While queries that only support appends are useful for some kinds of applications and certain types of storage systems, there are many streaming analytics use cases that need to update results. This includes streaming applications that cannot discard late arriving records, need early results for (long-running) windowed aggregates, or require non-windowed aggregates. In each of these cases, previously emitted result records need to be updated. Result-updating queries often materialize their result to an external database or key-value store in order to make it accessible and queryable for external applications. Applications that implement this pattern are dashboards, reporting applications, or [other applications](http://2016.flink-forward.org/kb_sessions/joining-infinity-windowless-stream-processing-with-flink/), which require timely access to continuously updated results. The following figure illustrates these kind of applications.
 
-
+虽然查询仅支持追加操作（append）对某类应用和特定类型的存储系统十分有用，但仍有大量的流分析用例需要更新结果。这包括1.流应用程序不能废弃迟到的记录，2.需要用到（长期运行）窗口聚集操作的早期结果，3.需要用到非窗口聚集。在每种情况下，已经发出的结果记录都需要被更新。更新结果查询通常将结果物化到外部数据库或键值存储中，使外部应用可以对它进行访问、查询。这类模式下的应用程序有仪表盘、报表系统、或[其他应用](http://2016.flink-forward.org/kb_sessions/joining-infinity-windowless-stream-processing-with-flink/)，这些系统需要即时访问连续更新的结果。下图展示了这类应用。
 
 ![Continuous Queries](./pics/dynamic-tables-3.png)
 
 ## Continuous Queries on Dynamic Tables
+
+## 在动态表上的连续查询
 
 Support for queries that update previously emitted results is the next big step for Flink’s relational APIs. This feature is so important because it vastly increases the scope of the APIs and the range of supported use cases. Moreover, many of the newly supported use cases can be challenging to implement using the DataStream API.
 
 So when adding support for result-updating queries, we must of course preserve the unified semantics for stream and batch inputs. We achieve this by the concept of Dynamic Tables. A dynamic table is a table that is continuously updated and can be queried like a regular, static table. However, in contrast to a query on a batch table which terminates and returns a static table as result, a query on a dynamic table runs continuously and produces a table that is continuously updated depending on the modification on the input table. Hence, the resulting table is a dynamic table as well. This concept is very similar to materialized view maintenance as we discussed before.
 
 Assuming we can run queries on dynamic tables which produce new dynamic tables, the next question is, “How do streams and dynamic tables relate to each other?” The answer is that streams can be converted into dynamic tables and dynamic tables can be converted into streams. The following figure shows the conceptual model of processing a relational query on a stream.
+
+对已发出数据进行修改的支持将是Flink关系API下一个重大的更新。这个特性是非常重要的，因为它可以极大增加API的适用范围，扩展用户使用场景。此外，许多新支持的用例对DataStream API的实现是很有挑战（challenge）的。
+
+因此，在添加 *结果更新查询* 这一特性时，我们当然也必须保留对流和批输入的统一语义支持。为达到这个效果，需要引入动态表（Dynamic Table）概念。动态表是一个连续更新的表，可以向常规的静态表一样被查询。批处理表上的查询会终止并返回一个静态表作为结果，与之不同，动态表上的查询会连续不断的运行，其产生的表会根据输入表上的修改而连续不断地更新。因此，结果表也同样是一个动态表。这个概念与之前讨论的物化视图维护过程是类似的。
+
+设想下，在动态表上执行查询并产生新的动态表，接下来的问题是“流和动态表之间是如何关联的？”答案很简单，流可以被转换成动态表，动态表也可以被转换成流。下面这张图就展示了流上关系查询处理的概念模型。
 
 ![Continuous Queries ](./pics/dynamic-tables-4.png)
 
@@ -137,25 +145,48 @@ In the following, we describe the different steps of this model:
 - Querying a dynamic table, and
 - Emitting a dynamic table.
 
+首先，将流转换成动态表。将连续查询在动态表上执行，它将产生新的动态表。最终，结果表被转换回流。特别需要指出的是这仅仅是逻辑模型，并不意味着查询时的实际执行过程。事实上，连续查询在内部将被翻译成传统的DataStream程序。
+
+接下来，我们描述下这个模型中的不同步骤：
+- 在流上定义动态表
+- 在动态表上查询
+- 发出动态表
+
 ## Defining a Dynamic Table on a Stream
+
+## 在流上定义动态表
 
 The first step of evaluating a SQL query on a dynamic table is to define a dynamic table on a stream. This means we have to specify how the records of a stream modify the dynamic table. The stream must carry records with a schema that is mapped to the relational schema of the table. There are two modes to define a dynamic table on a stream: Append Mode and Update Mode.
 
 In append mode each stream record is an insert modification to the dynamic table. Hence, all records of a stream are appended to the dynamic table such that it is ever-growing and infinite in size. The following figure illustrates the append mode.
 
+在动态表上执行SQL查询的第一步是在在流上定义动态表。这意味着需要指定流上的记录如何修改动态表。流上的记录都应该携带模式（schema），此模式需映射到表上的关系模式。基于此，流上的动态表定义就有两种模式：追加模式（Append Mode）和更新模式（Update Mode）。
+
+在追加模式中，每个流上的记录相对于动态表来说都是一次插入修改。因此，流上所有记录都会追加到动态表中，因此动态表是不断增长并且是无限大的。下图展示追加模式。
+
 ![Dynamic Table on a Stream](./pics/dynamic-tables-5-1560x501.png)
 
 In update mode a stream record can represent an insert, update, or delete modification on the dynamic table (append mode is in fact a special case of update mode). When defining a dynamic table on a stream via update mode, we can specify a unique key attribute on the table. In that case, update and delete operations are performed with respect to the key attribute. The update mode is visualized in the following figure.
+
+在更新模式中，流上的记录可以代表动态表上的插入（insert）、更新（update）、删除（delete）这些修改操作（追加模式实际上是一种特殊的更新模式）。通过更新模式定义流上动态表时，需要指定表中的唯一主键（unique key）。在这种情况下，更新、删除操作都会在主键上执行。更新模式在下图中进行了形式化展示。
 
 ![Dynamic Table on a Stream](./pics/dynamic-tables-6-1560x303.png)
 
 ## Querying a Dynamic Table
 
+## 动态表查询
+
 Once we have defined a dynamic table, we can run a query on it. Since dynamic tables change over time, we have to define what it means to query a dynamic table. Let’s imagine we take a snapshot of a dynamic table at a specific point in time. This snapshot can be treated as a regular static batch table. We denote a snapshot of a dynamic table A at a point t as A[t]. The snapshot can be queried with any SQL query. The query produces a regular static table as result. We denote the result of a query q on a dynamic table A at time t as q(A[t]). If we repeatedly compute the result of a query on snapshots of a dynamic table for progressing points in time, we obtain many static result tables which are changing over time and effectively constitute a dynamic table. We define the semantics of a query on a dynamic table as follows.
 
-A query q on a dynamic table A produces a dynamic table R, which is at each point in time t equivalent to the result of applying q on A[t], i.e., R[t] = q(A[t]). This definition implies that running the same query on q on a batch table and on a streaming table produces the same result. In the following, we show two examples to illustrate the semantics of queries on dynamic tables.
+A query `q` on a dynamic table `A` produces a dynamic table `R`, which is at each point in time `t` equivalent to the result of applying `q` on `A[t]`, i.e., `R[t] = q(A[t])` . This definition implies that running the same query on `q` on a batch table and on a streaming table produces the same result. In the following, we show two examples to illustrate the semantics of queries on dynamic tables.
 
-In the figure below, we see a dynamic input table A on the left side, which is defined in append mode. At time t = 8, A consists of six rows (colored in blue). At time t = 9 and t = 12, one row is appended to A (visualized in green and orange, respectively). We run a simple query on table A which is shown in the center of the figure. The query groups by attribute k and counts the records per group. On the right hand side we see the result of query q at time t = 8 (blue), t = 9 (green), and t = 12 (orange). At each point in time t, the result table is equivalent to a batch query on the dynamic table A at time t.
+In the figure below, we see a dynamic input table `A` on the left side, which is defined in append mode. At time `t = 8`, A consists of six rows (colored in blue). At time `t = 9` and `t = 12`, one row is appended to `A` (visualized in green and orange, respectively). We run a simple query on table `A` which is shown in the center of the figure. The query groups by attribute `k` and counts the records per group. On the right hand side we see the result of query `q` at time `t = 8` (blue), `t = 9` (green), and `t = 12` (orange). At each point in time `t`, the result table is equivalent to a batch query on the dynamic table `A` at time `t`.
+
+一旦定义了动态表，可以在其上执行查询。由于动态表会随时间更改，我们需要明确定义查询动态表的含义。设想下，在特定时点上取动态表的快照。这个快照可以被当做常规的静态批量表。形式化定义：将动态表A在某一时点t的快照定义为A[t]。可以使用任意SQL在这个快照上执行查询。查询结果仍是常规静态表。形式化定义：将查询q在动态表A在某一时点t上的查询结果记为q(A[t])。随着时间演进，若重复在动态表快照上执行查询，将会获得随时间改变的多个静态结果表，这些构成了新的动态表。我们在动态表上定义如下查询语义。
+
+动态表`A`上的查询`q`将产生动态表`R`，意味着：对于任意时刻`t`，在`A[t]`上应用`q`，都有`R[t] = q(A[t])`。这个定义意味着在批量表上和流量表上执行同样的查询`q`，将产生相同的结果。接下来，我们用两个例子展示了动态表上的查询语义。
+
+在下图中，左侧是动态输入表`A`，它被定义为追加模式。在`t = 8`的时刻，`A`由六条记录组成（标识为蓝色）。在`t = 9`和`t = 12`的时刻，`A`中各追加了一条新的记录（分别被标识为绿色和橘色）。图中位置，展现了在表`A`上执行的简单查询语句。这个查询在属性`k`上进行分组并统计每个分组的记录数。右侧是`q`在`t = 8`时刻（蓝色）、`t = 9`时刻（绿色）、`t = 12`时刻（橘色）的查询结果。在`t`的每个时点，结果表都是动态表`A`在`t`时刻的批量表上的查询结果。
 
 ![Dynamic Table on a Stream](./pics/dynamic-tables-7-1560x706.png)
 
@@ -163,13 +194,23 @@ The query in this example is a simple grouped (but not windowed) aggregation que
 
 The second example shows a similar query which differs in one important aspect. In addition to grouping on the key attribute k, the query also groups records into tumbling windows of five seconds, which means that it computes a count for each value of k every five seconds. Again, we use Calcite’s [group window functions](https://calcite.apache.org/docs/reference.html#grouped-window-functions) to specify this query. On the left side of the figure we see the input table A and how it changes over time in append mode. On the right we see the result table and how it evolves over time.
 
+示例中是简单的分组（但没有窗口操作）聚合查询。因此，结果表大小取决于输入表中分组键上不同值的数量。此外，值得注意的是，查询会连续更新结果记录，而不仅仅是添加新的记录。
+
+第二个示例展示了类似查询的另一个重要方面。除了在属性k上进行分组，查询将记录分成每5秒钟一个的滚动窗口，这意味着每5秒钟将在每个k的属性值上进行一次统计。同样的，使用了Calcite的分组窗口函数（[group window function](https://calcite.apache.org/docs/reference.html#grouped-window-functions)）来指定这个查询。在图的左侧是输入表A，它随时间按照追加模式更新。在图的右侧是结果表，以及它随时间的变化。
+
 ![Dynamic Table on a Stream](./pics/dynamic-tables-8-1560x654.png)
 
 In contrast to the result of the first example, the resulting table grows relative to the time, i.e., every five seconds new result rows are computed (given that the input table received more records in the last five seconds). While the non-windowed query (mostly) updates rows of the result table, the windowed aggregation query only appends new rows to the result table.
 
 Although this blog post focuses on the semantics of SQL queries on dynamic tables and not on how to efficiently process such a query, we’d like to point out that it is not possible to compute the complete result of a query from scratch whenever an input table is updated. Instead, the query is compiled into a streaming program which continuously updates its result based on the changes on its input. This implies that not all valid SQL queries are supported but only those that can be continuously, incrementally, and efficiently computed. We plan discuss details about the evaluation of SQL queries on dynamic tables in a follow up blog post.
 
+与第一个示例的结果不同，这一次的结果表随着时间增长，即，每5秒钟计算新的结果集（假设输入表在最后5秒内接收到更多的记录）。非窗口查询（主要）更新结果表的行，窗口化聚集查询只是在结果表中增加新的记录。
+
+虽然博文主要关注在动态表上SQL查询的语义，并没有聚焦如何高效执行一个查询，但我们想要指出：无论何时输入表发生了更新，从头完整计算查询的结果都是不可能的。相反，查询被编译为流处理程序，它可以随着输入上的更新源源不断地更新结果集。这意味着并非所有有效（valid）SQL查询都是被支持的，（动态表上）仅支持那些可以被连续、增量、高效计算的SQL。在后续博客文章中，我们计划讨论更多动态表上SQL查询执行的相关细节。
+
 ## Emitting a Dynamic Table
+
+## 发出动态表
 
 Querying a dynamic table yields another dynamic table, which represents the query’s results. Depending on the query and its input tables, the result table is continuously modified by insert, update, and delete changes just like a regular database table. It might be a table with a single row, which is constantly updated, an insert-only table without update modifications, or anything in between.
 
@@ -177,26 +218,52 @@ Traditional database systems use logs to rebuild tables in case of failures and 
 
 A dynamic table is converted into a redo+undo stream by converting the modifications on the table into stream messages. An insert modification is emitted as an insert message with the new row, a delete modification is emitted as a delete message with the old row, and an update modification is emitted as a delete message with the old row and an insert message with the new row. This behavior is illustrated in the following figure.
 
+查询动态表会产生另一个动态表，这代表了查询的结果。根据查询和它的输入表，结果表就像常规数据库表一样，将通过插入、更新、删除被连续修改。他可能是1.包含单一记录的表，被连续不断更新，也可能是2.没有更新修改的纯插入的表，或者是3.介于两者之间。
+
+传统数据库系统在发生故障和需要复制时，使用日志来重建表。市面上有不同的日志技术，如UNDO、REDO和UNDO/REDO日志。总的来说，UNDO日志记录了被修改元素之前的值，当发生不完全事务时进行回滚（revert）操作；REDO日志记录了修改元素的新值，以重做被丢失的完成事务；UNDO/REDO日志将被修改元素的旧值、新值都记录下来，可以回滚未完成事务，并重做丢失的完成事务。基于上述日志技术的原则，动态表可以被转换成两种类型的更新流，REDO流和REDO+UNDO流。
+
+通过将表上的修改转换成流消息，动态表可以被转换成redo+undo流。插入修改就是发出携带新纪录的插入消息，删除修改就是发出携带旧记录的删除消息，更新修改就是发出 *携带旧记录的删除消息* 和 *携带新纪录的插入消息*。下图展示了这些行为。
+
 ![Dynamic Table on a Stream](./pics/dynamic-tables-9-1560x631.png)
 
-The left shows a dynamic table which is maintained in append mode and serves as input to the query in the center. The result of the query converted into a redo+undo stream which is shown at the bottom. The first record (1, A) of the input table results in a new record in the result table and hence in an insert message +(A, 1) to the stream. The second input record with k = ‘A’ (4, A) produces an update of the (A, 1) record in the result table and hence yields a delete message -(A, 1) and an insert message for +(A, 2). All downstream operators or data sinks need to be able to correctly handle both types of messages.
+The left shows a dynamic table which is maintained in append mode and serves as input to the query in the center. The result of the query converted into a redo+undo stream which is shown at the bottom. The first record `(1, A)` of the input table results in a new record in the result table and hence in an insert message `+(A, 1)` to the stream. The second input record with `k = ‘A’` `(4, A)` produces an update of the `(A, 1)` record in the result table and hence yields a delete message `-(A, 1)` and an insert message for `+(A, 2)`. All downstream operators or data sinks need to be able to correctly handle both types of messages.
 
 A dynamic table can be converted into a redo stream in two cases: either it is an append-only table (i.e., it only has insert modifications) or it has a unique key attribute. Each insert modification on the dynamic table results in an insert message with the new row to the redo stream. Due to the restriction of redo streams, only tables with unique keys can have update and delete modifications. If a key is removed from the keyed dynamic table, either because a row is deleted or because the key attribute of a row was modified, a delete message with the removed key is emitted to the redo stream. An update modification yields an update message with the updating, i.e., new row. Since delete and update modifications are defined with respect to the unique key, the downstream operators need to be able to access previous values by key. The figure below shows how the result table of the same query as above is converted into a redo stream.
 
+左侧展示了基于追加模式进行修改的动态表，它做为图中间查询部分的输入。查询的结果被转换成redo+undo的流，在图中的下部分展示。输入表中的第一条记录`(1, A)`在结果表中产生了新的记录，因此在流上产生了一条携带`+(A, 1)`的插入消息。`k = 'A'` 的第二条输入记录`(4, A)`在结果表中产生了对`(A, 1)`的更新操作，因此产生了携带`-(A, 1)`的删除消息和携带`+(A, 2)`的插入消息。所有下游算子或数据接收器（sink）都需要能够正确处理这两类消息。
+
+动态表可以被转换成redo流，有两种情况：这是只追加的表（也就是说，它只有插入操作），或者它有唯一的主键。每个动态表上的插入操作都会产生redo流上携带新纪录的插入消息（insert message）。由于redo流的严格限制，只有具有唯一主键的表可以执行更新操作和删除操作。如果有主键的动态表上（纪录的）键被移除了，无论是由于记录被删除导致还是由于记录的主键值被修改导致，都将在redo流上发出携带被移除主键（removed key）的删除消息（delete message）。修改操作会产生携带修改内容的修改消息，即新的记录。由于删除、修改操作是与唯一主键相关的，下游算子需要支持通过主键访问之前的值。下图展示了相同的查询如何转换成redo流。
+
 ![Dynamic Table on a Stream](./pics/dynamic-tables-10-1560x630.png)
 
-The row (1, A) which yields an insert into the dynamic table results in the +(A, 1) insert message. The row (4, A) which produces an update yields the \*(A, 2) update message.
+The row `(1, A)` which yields an insert into the dynamic table results in the `+(A, 1)` insert message. The row `(4, A)` which produces an update yields the `*(A, 2)` update message.
 
 Common use cases for redo streams are to write the result of a query to an append-only storage system, like rolling files or a Kafka topic, or to a data store with keyed access, such as Cassandra, a relational DBMS, or a compacted Kafka topic. It is also possible to materialize a dynamic table as keyed state inside of the streaming application that evaluates the continuous query and make it queryable from external systems. With this design Flink itself maintains the result of a continuous SQL query on a stream and serves key lookups on the result table, for instance from a dashboard application.
 
+记录`(1, A)`将产生动态表上的插入操作，并携带了`+(A, 1)`作为插入信息。记录`(4, A)`将产生更新操作，并携带了`*(A, 2)`作为更新信息。
+
+redo流上通常的用例是将查询结果1.写入到一个追加模式的存储系统中，如回滚文件（rolling files）或kafka topic，2.写入到可通过主键访问的数据存储中，如Cassandra、关系数据库、或者compacted kafka topic。还可以将动态表物化到流应用程序的内部的具有主键的状态中，它可以连续执行查询并可以从外部系统中通过查询访问它。通过这种设计，Flink自身维护了流上连续SQL查询的结果集，并在结果表上提供了通过逐渐查询表的操作，例如仪表盘应用。
+
 ## What will Change When Switching to Dynamic Tables?
+
+## 当切换使用动态表时会发生哪些改变？
 
 In version 1.2, all streaming operators of Flink’s relational APIs, like filter, project, and group window aggregates, only emit new rows and are not capable of updating previously emitted results. In contrast, dynamic table are able to handle update and delete modifications. Now you might ask yourself, How does the processing model of the current version relate to the new dynamic table model? Will the semantics of the APIs completely change and do we need to reimplement the APIs from scratch to achieve the desired semantics?
 
 The answer to all these questions is simple. The current processing model is a subset of the dynamic table model. Using the terminology we introduced in this post, the current model converts a stream into a dynamic table in append mode, i.e., an infinitely growing table. Since all operators only accept insert changes and produce insert changes on their result table (i.e., emit new rows), all supported queries result in dynamic append tables, which are converted back into DataStreams using the redo model for append-only tables. Consequently, the semantics of the current model are completely covered and preserved by the new dynamic table model.
 
+在1.2版本中，所有的Flink关系API上的流算子，如filter、project、group window aggregate，仅发出新记录，并没有更新先前发出结果的能力。相反，动态表能够处理更新和删除操作。通过上述内容，你可以自问下：当前版本的处理模型如何与新的动态表模式相关联？API的语义是否彻底改变了？为了满足上述语义，我们是否需要重新从头实现所有API？
+
+上述问题的答案都很简单的。当前的处理模型是动态表模型的子集。使用本文中引入的术语，当前模型可以将流转换成追加模式下的动态表，也就是说，一个无限增长的表。由于所有算子只接收插入操作，并在结果表中产生插入操作（即，发出新的记录），所有在动态追加表中支持的查询结果，都可以通过追加表的redo模式转换回DataStream。因此，新的动态表模型完全覆盖并保留了当前模型的语义。
+
 ## Conclusion and Outlook
+
+## 结论与展望
 
 Flink’s relational APIs are great to implement stream analytics applications in no time and used in several production settings. In this blog post we discussed the future of the Table API and SQL. This effort will make Flink and stream processing accessible to more people. Moreover, the unified semantics for querying historic and real-time data as well as the concept of querying and maintaining dynamic tables will enable and significantly ease the implementation of many exciting use cases and applications. As this post was focusing on the semantics of relational queries on streams and dynamic tables, we did not discuss the details of how a query will be executed, which includes the internal implementation of retractions, handling of late events, support for early results, and bounding space requirements. We plan to publish a follow up blog post on this topic at a later point in time.
 
 In recent months, many members of the Flink community have been discussing and contributing to the relational APIs. We made great progress so far. While most work has focused on processing streams in append mode, the next steps on the agenda are to work on dynamic tables to support queries that update their results. If you are excited about the idea of processing streams with SQL and would like to contribute to this effort, please give feedback, join the discussions on the mailing list, or grab a JIRA issue to work on.
+
+Flink关系API非常适合在短时间内实现流分析应用，并可以在多种生产环境设置中使用。在本文中，我们讨论了Table API和SQL的特性。这项工作有助于Flink和流处理触达更多用户。更进一步，在历史和实时数据上，使用统一语义的查询方式，通过这种方式还可以用来查询和维护动态表，这将显著简化用例和应用程序的实现过程。由于本文聚焦在流上和动态表上的关系查询语义，并没有讨论查询被如何执行的细节内容。这些细节内容，包括撤销机制的内部实现，如何处理迟到事件，对早期结果集的支持，如何限制空间需求。我们计划在稍后发布与此主题相关的后续博客文章。
+
+最近几个月，Flink社区中的许多成员一直在讨论并为关系API做出贡献。到目前为止，我们已经取得了很大的进步。虽然大部分工作都是聚焦在追加模式下的流处理问题，但议程的下一步将在动态表上工作，以支持动态表上的查询以及修改结果。如果你对流处理上的SQL工作改到兴奋，并有意为此做出贡献，请提供反馈，加入邮件列表的讨论，或者在JIRA上进行问题的处理。
