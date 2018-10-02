@@ -35,7 +35,7 @@ env.setStateBackend(new RocksDBStateBackend(filebackend, true));
 
 ### Scala Example
 
-```
+```scala
 val env = StreamExecutionEnvironment.getExecutionEnvironment()
 env.setStateBackend(new RocksDBStateBackend(filebackend, true))
 ```

@@ -63,6 +63,14 @@ Unified APIs for stream and batch processing are important for several reasons. 
 
 The following code snippet shows two equivalent Table API and SQL queries that compute a simple windowed aggregate on a stream of temperature sensor measurements. The syntax of the SQL query is based on [Apache Calcite’s](https://calcite.apache.org/) syntax for [grouped window functions](https://calcite.apache.org/docs/reference.html#grouped-window-functions) and will be supported in version 1.3.0 of Flink.
 
+自从1.1.0版本（发布于2016年8月），Flink具有了两个语义上等价的关系API，嵌入式语言的Table API（对java和scala编程来说）和标准SQL。两个API在处理在线流数据和历史批量数据上都被设计成统一的API（*意即两个API都可以同时处理流和批*）。这意味着：
+
+**无论输入是静态批量数据还是流数据，查询总是能产生完全相同的结果。**
+
+出于多种原因考虑，将流和批处理的API进行统一都是十分重要的。首先，对用户来说，处理静态数据和流数据，只需要学习一套API。进一步，相同的查询可以同时用在分析批量数据和流数据上，这允许在用同一个查询联合分析历史数据和在线数据。在当前状态下，我们尚未完成批和流在语义上的完全统一，但社区一直在朝着这个目标前进并取得了很好的进展。
+
+下面的代码片段展示了Table API和SQL两个等效API查询，这些查询在温度传感器测量的数据流上完成简单的窗口聚合操作。SQL查询的语法是基于[Apache Calcite](https://calcite.apache.org/)的分组窗口函数（[grouped window functions](https://calcite.apache.org/docs/reference.html#grouped-window-functions)）语法，这将在Flink 1.3.0版本中得到支持。
+
 ```scala
 val env = StreamExecutionEnvironment.getExecutionEnvironment
  env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
@@ -88,17 +96,27 @@ val tEnv = TableEnvironment.getTableEnvironment(env)
  |""".stripMargin)
 ```
 
-As you can see, both APIs are tightly integrated with each other and Flink’s primary [DataStream](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/datastream_api.html) and [DataSet](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/batch/index.html) APIs. A `Table` can be generated from and converted to a `DataSet` or `DataStream`. Hence, it is easily possible to scan an external table source such as a database or [Parquet](https://parquet.apache.org/) file, do some preprocessing with a Table API query, convert the result into a `DataSet` and run a [Gelly](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/libs/gelly/index.html) graph algorithm on it. The queries defined in the example above can also be used to process batch data by changing the execution environment.
+As you can see, both APIs are tightly integrated with each other and Flink’s primary [DataStream](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/datastream_api.html) and [DataSet](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/batch/index.html) APIs. A `Table` can be generated from and converted to a `DataSet` or `DataStream`. Hence, it is easily possible to scan an external table source such as a database or [Parquet](https://parquet.apache.org/) file, do some preprocessing with a `Table` API query, convert the result into a `DataSet` and run a [Gelly](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/libs/gelly/index.html) graph algorithm on it. The queries defined in the example above can also be used to process batch data by changing the execution environment.
+
+如您所见，这两个API相互间深度集成，并与Flink基础的DataStream和DataSet API也有深度集成。一个`Table`可以生成自/转化成一个`DataSet`或`DataStream`。因此，可以很容易扫描外部数据源如数据库或[Parquet](https://parquet.apache.org/)文件，并用`Table`API语句进行一些预处理操作，并将结果写到`DataSet`，在之后可以使用[Gelly](https://ci.apache.org/projects/flink/flink-docs-release-1.2/dev/libs/gelly/index.html)图算法在其上进行分析。示例中，同样的查询语句只需要修改下运行时环境，就可以用来处理批数据。
 
 Internally, both APIs are translated into the same logical representation, optimized by Apache Calcite, and compiled into DataStream or DataSet programs. In fact, the optimization and translation process does not know whether a query was defined using the Table API or SQL. If you are curious about the details of the optimization process, have a look at [a blog post](http://flink.apache.org/news/2016/05/24/stream-sql.html) that we published last year. Since the Table API and SQL are equivalent in terms of semantics and only differ in syntax, we always refer to both APIs when we talk about SQL in this post.
+
+在内部，两个API会被转换成同一个逻辑表达，并被Apache Calcite进行优化，最后编译成DataStream或DataSet API的执行程序。事实上，优化和翻译程序并不知道查询被定义成Table API还是SQL形式。如果很好奇优化过程的细节，可以参看去年发布的[一篇博文](http://flink.apache.org/news/2016/05/24/stream-sql.html)。由于Table API和SQL在语义层面是等价的，其差异仅仅表现在语法层面，接下来当我们提到SQL时事实上指的是这两类API。
 
 In its current state (version 1.2.0), Flink’s relational APIs support a limited set of relational operators on data streams, including projections, filters, and windowed aggregates. All supported operators have in common that they never update result records which have been emitted. This is clearly not an issue for record-at-a-time operators such as projection and filter. However, it affects operators that collect and process multiple records as for instance windowed aggregates. Since emitted results cannot be updated, input records, which arrive after a result has been emitted, have to be discarded in Flink 1.2.0.
 
 The limitations of the current version are acceptable for applications that emit data to storage systems such as Kafka topics, message queues, or files which only support append operations and no updates or deletes. Common use cases that follow this pattern are for example continuous ETL and stream archiving applications that persist streams to an archive or prepare data for further online (streaming) analysis or later offline analysis. Since it is not possible to update previously emitted results, these kinds of applications have to make sure that the emitted results are correct and will not need to be corrected in the future. The following figure illustrates such applications.
 
+在当前情况（1.2.0版本），Flink关系API在数据流上，支持有限的关系操作符，包括：投影（projection）、过滤（filter）、窗口聚合（windowed aggregate）。所有支持的算子（操作符）都有一个共同点：永远不会修改已发射（emit）出去的记录。这对如投影、过滤这些一次只处理一条记录的算子来说不是问题。但对收集（collect）并处理（process）多条记录的算子会有影响，比如窗口聚合。由于无法更新发出的结果，在Flink 1.2.0中，那些迟到（在结果发出后才到达）的输入数据只能被丢弃。
+
+当前版本的限制对一些应用程序来说是可接受的，这类应用程序的下游存储往往是是Kafka topic、消息管道（message queue）、仅支持追加（append）不支持更新删除操作的文件系统。这些常见用例遵循如下模式：连续的ETL和流存档应用将1.持久化流数据到存档位置；2.为将来的在线（流）分析或离线分析准备数据。由于不支持对已发出数据进行修改，这类应用必须确保发出的结果是正确的，并且将来不需要被修改。下图展示了这类应用：
+
 ![streaming data](./pics/dynamic-tables-2.png)
 
 While queries that only support appends are useful for some kinds of applications and certain types of storage systems, there are many streaming analytics use cases that need to update results. This includes streaming applications that cannot discard late arriving records, need early results for (long-running) windowed aggregates, or require non-windowed aggregates. In each of these cases, previously emitted result records need to be updated. Result-updating queries often materialize their result to an external database or key-value store in order to make it accessible and queryable for external applications. Applications that implement this pattern are dashboards, reporting applications, or [other applications](http://2016.flink-forward.org/kb_sessions/joining-infinity-windowless-stream-processing-with-flink/), which require timely access to continuously updated results. The following figure illustrates these kind of applications.
+
+
 
 ![Continuous Queries](./pics/dynamic-tables-3.png)
 

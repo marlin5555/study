@@ -36,7 +36,7 @@ First, we define the messages of the incoming monitoring event stream. Every mon
 
 首先，我们定义输入的监控事件流。每个监控的信息包括其产生的支架ID。附加的温度事件包含当前温度，能量消耗事件包含当前的电压。我们使用POJO来构造模型：
 
-``` scala
+``` java
 public abstract class MonitoringEvent {
     private int rackID;
     ...
@@ -124,7 +124,7 @@ DataStream<TemperatureWarning> warnings = tempPatternStream.select(
         TemperatureEvent second = (TemperatureEvent) pattern.get("Second Event");
 
         return new TemperatureWarning(
-            first.getRackID(), 
+            first.getRackID(),
             (first.getTemperature() + second.getTemperature()) / 2);
     }
 );
@@ -198,6 +198,3 @@ In the future, the Flink community will further extend the CEP library’s funct
 在后续，Flink社区将扩展CEP库的方法和表现力。在Road Map上下一阶段是对类正则表达方式的模式进行支持，包括Kleene start，上下界，和否定。更进一步，计划允许使用where子句来访问前序匹配事件的属性。这个特性将使对非预期的事件序列剪枝更容易。
 
 > Note: The example code requires Flink 1.0.1 or higher.
-
-
-
