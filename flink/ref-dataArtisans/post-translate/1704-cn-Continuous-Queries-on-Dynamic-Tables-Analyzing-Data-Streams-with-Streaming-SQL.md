@@ -78,12 +78,6 @@ val tEnv = TableEnvironment.getTableEnvironment(env)
 
 ## 在动态表上的连续查询
 
-Support for queries that update previously emitted results is the next big step for Flink’s relational APIs. This feature is so important because it vastly increases the scope of the APIs and the range of supported use cases. Moreover, many of the newly supported use cases can be challenging to implement using the DataStream API.
-
-So when adding support for result-updating queries, we must of course preserve the unified semantics for stream and batch inputs. We achieve this by the concept of Dynamic Tables. A dynamic table is a table that is continuously updated and can be queried like a regular, static table. However, in contrast to a query on a batch table which terminates and returns a static table as result, a query on a dynamic table runs continuously and produces a table that is continuously updated depending on the modification on the input table. Hence, the resulting table is a dynamic table as well. This concept is very similar to materialized view maintenance as we discussed before.
-
-Assuming we can run queries on dynamic tables which produce new dynamic tables, the next question is, “How do streams and dynamic tables relate to each other?” The answer is that streams can be converted into dynamic tables and dynamic tables can be converted into streams. The following figure shows the conceptual model of processing a relational query on a stream.
-
 对已发出数据进行修改的支持将是Flink关系API下一个重大的更新。这个特性是非常重要的，因为它可以极大增加API的适用范围，扩展用户使用场景。此外，许多新支持的用例对DataStream API的实现是很有挑战（challenge）的。
 
 因此，在添加 *结果更新查询* 这一特性时，我们当然也必须保留对流和批输入的统一语义支持。为达到这个效果，需要引入动态表（Dynamic Table）概念。动态表是一个连续更新的表，可以向常规的静态表一样被查询。批处理表上的查询会终止并返回一个静态表作为结果，与之不同，动态表上的查询会连续不断的运行，其产生的表会根据输入表上的修改而连续不断地更新。因此，结果表也同样是一个动态表。这个概念与之前讨论的物化视图维护过程是类似的。
