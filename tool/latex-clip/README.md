@@ -1,10 +1,10 @@
-##这个项目
+## 这个项目
 
 1. 只支持windows
 2. 完成的功能是拷贝latex代码，并转换成`![]()`格式的可插入代码，方便在github中使用
 3. 支持热键启动/关闭监控剪切板
 
-##使用方法：
+## 使用方法：
 
 1. 将lib下的两个DLL文件放到`C:\Windows\System32`目录下
 2. 在com.melloware.jintellitype.JIntellitype类中第95行左右，找到
