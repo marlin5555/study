@@ -17,6 +17,20 @@ In this post, we’ll go into more detail about rescalable state and the differe
 
 Whether you’re new to stateful stream processing or you’d just like to learn more about the internals of one of Flink’s most powerful features, this post will provide a detailed overview of application state and its role in real-world stream processing.
 
+每隔一段时间，亚马逊网络服务就会经历一次服务中断，由此引起应用程序和网站的不可访问，会使全球数百万互联网用户感到恐慌。不久之后，问题得到解决，并恢复正常。大多数人随波逐流，最终会完全忘记微观危机。
+
+但，对于负责完成中断恢复的工程师，尤其是那些公司的应用是构建在AWS之上，这件事儿并不那么简单。MediaMath就属于这种情况，在(提供)编程市场（programmatic marketing）中，世界500强公司的三分之二都是它的客户。
+
+MediaMath报告的基础架构由ApacheFlink®提供支持，并在AWS内部运行。今年早些时候，S3服务的中断意味着Flink无法再短时间内处理流入的数据。当S3重新连接时，有大量的数据等待被处理，这些数据超过了其集群的扩展性（scaled）和处理能力（processed）。
+
+他们如何解决这个问题的？答案是Flink可缓存的状态。
+
+Flink 1.2.0，在2017年2月发布，引入了可重扩展的能力（ability to rescale），这使得Flink程序不会丢失现有应用状态。这意味着在恢复期间，MediaMath可以增加更多资源到集群中，从而及时恢复那些由于中断而延迟的数据，所有这些数据都具备完整的一次且仅一次的语义，因此对前序处理结果的完整性影响是零。
+
+在这篇文章中，将详细介绍Flink中的可重扩展状态（rescalable state），以及应用程序状态的不同类型。Seth Wiesman是MediaMath的数据工程师，他将分享在S3中断发生时的更多信息，以及他们公司如何充分利用Flink的可重扩展状态来应对资源密集型的场景，并使得Flink应用可以运行得更高效。Stefan Richter是data Artisans的软件开发工程师，将深入介绍应用程序状态，以及在Flink中如何管理状态。
+
+无论你是有状态流处理的新手还是想了解Flink最强大功能之一的内部结构，本文将详细介绍应用程序状态以及其在实际流处理中的作用。
+
 ## One-click Rescaling with Flink at MediaMath
 
 By [Seth Wiesman](https://www.linkedin.com/in/sethwiesman) of MediaMath
@@ -24,6 +38,10 @@ By [Seth Wiesman](https://www.linkedin.com/in/sethwiesman) of MediaMath
 MediaMath is a global company running multiple data centers of machines and bidding on billions of online ad impressions each day. Whenever a bid on an ad is won, a log is generated. The log acts as a record of the financial transaction and also contains many interesting dimensions about where the ad was placed.
 
 We use Apache Flink to power our real-time reporting infrastructure, which takes these raw logs and transforms them into detailed and meaningful reports for our clients. Our service level agreements with our customers require us to accept log records up to 7 days late and to reevaluate metrics based on changing metadata, both of which are easily implemented using Flink’s event time semantics and rich windowing APIs. And because our reports act as proof of purchase and are used for billing, it is important that we maintain highly accurate counts, even in the face of failure, which is possible due to Flink’s fault tolerance.
+
+MediaMath 是一家全球性公司，运行着多个数据中心，并对每天数十亿在线广告展示进行出价。每当广告竞标达成，都将生成一条日志。该日志充当了金融交易的记录，还包含了许多关于广告位置信息的多维度信息。
+
+我们使用Apache Flink来支持实时报告基础架构，它将接收这些原始日志，并为我们的客户转换成更详细且有意义的报告。我们与客户签订的服务级别协议要求我们接收最长7天内的日志记录，并可以依据元数据的更改重新计算指标，这两者都可以通过Flink基于事件时间语义和丰富的窗口API得以实现。由于我们的报告充当了购买证明并用于计费，即使面临失败，也应当维护高精度的计算，而这有赖于Flink的容错能力。
 
 Although the transaction data are generated at private data centers, our reporting infrastructure is run within AWS. Logs flow into Amazon through S3, then our Flink cluster is run on EC2 spot instances, automatically failing over into different availability zones as spot prices rise and fall (a separate topic altogether and one that we spoke about at Flink Forward SF).
 
