@@ -4,6 +4,8 @@ October 14, 2016 - [Flink Features](https://data-artisans.com/blog/category/flin
 
 > This post is the first in a series where the data Artisans team will highlight some of Apache Flink’s® core features. By Fabian Hueske ([@fhueske](https://twitter.com/fhueske)) and Mike Winters ([@wints](https://twitter.com/wints))
 
+> 这篇博文首发自data Artisans团队的一个系列文章，该系列文章旨在凸显Apache Flink®内核的一些特性。由 Fabian Hueske ([@fhueske](https://twitter.com/fhueske)) 和 Mike Winters ([@wints](https://twitter.com/wints))完成。
+
 Stream processing is commonly associated with ‘data in motion’, powering systems that make sense of and respond to data in nearly the same instant it’s created. The most frequently discussed streaming topics, such as latency and throughput or watermarks and handling of late data, focus on the present rather than the past.
 
 In reality, though, there are a number of cases where you’ll need to reprocess data that your streaming application has already processed before. Some examples include:
@@ -13,7 +15,18 @@ In reality, though, there are a number of cases where you’ll need to reprocess
 
 Apache Flink’s savepoint feature enables all of the above and is one of the unique points that distinguishes Flink from other distributed open source stream processors. In this blog post, we explain how savepoints are used to reprocess data and give some insight into how this feature is implemented in Flink.
 
+流处理往往跟‘流动的数据’相关联，使得系统能够在数据创建时刻开始就能够对其（数据）作出响应并使之具备意义。流处理上最频繁被讨论的话题如：延时、吞吐、水纹（watermark）、迟到数据处理，都集中在当前时刻而不是过去时刻。
+
+但事实上，在很多情况下都需要重新处理，流应用程序已经处理过的，数据。比如：
+- 部署新版的应用程序，带有新功能、错误修复、或应用了更好的机器学习模型。
+- 使用同一数据流作为源头，对应用程序的不同版本进行A/B测试，在不废弃前序状态的基础上从同一个时点开始进行测试。
+- 评估并执行应用程序的迁移，迁移到处理框架的新版本下，或迁移到不同的集群。
+
+Apache Flink的保存点（savepoint）特性使得上述需求都能满足，这是Flink不同于其他分布式开源流处理引擎的独特点之一。在这篇博文的后续，将解释保存点是如何被用来重新处理数据，并深入Flink的实现来洞察这些特性的原理。
+
 ## What exactly do you mean by “reprocessing”?
+
+## “重处理”到底意味着什么？
 
 To make sure the idea of data reprocessing is clear, let’s talk through a business case where you might need to reprocess data. Imagine a social media company that rolls out a paid or promoted posts feature in addition to its standard ‘organic’ posts. The company’s end users have access to a simple, Flink-powered dashboard showing how many times all of their posts, both organic and paid, have been viewed, clicked, etc. A few weeks later, it becomes clear (based on user feedback) that the dashboard would be a lot more helpful if it split out organic vs. paid post data. To make this happen, it’s necessary to go back in time to when the paid post feature was released and then reprocess all post data from that point forward, this time separating views and interactions for paid vs. organic posts. It’d be a big burden to reprocess all of historical data starting from when the company was founded, so being able to reprocess from the point the paid post feature was rolled out while maintaining state on earlier computations is crucial. So when we use the word ‘reprocessing’, we’re talking about returning to a prior, consistent state of the system (as defined by the developer and not necessarily the beginning of the stream) and then continuing to process again from that state, probably after having made a change to your Flink program. Good news for all of our readers out there: reprocessing as defined above comes for free in Flink using a feature called savepoints. When we say ‘comes for free’, we mean that as long as your program is fault tolerant and able to recover from a failure, you’ll be able to create a savepoint and reprocess data in Flink with almost zero extra setup work.
 
