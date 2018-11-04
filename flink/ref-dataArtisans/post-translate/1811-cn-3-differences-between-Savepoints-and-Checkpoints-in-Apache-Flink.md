@@ -30,7 +30,7 @@ Checkpoints和Savepoints对Apache Flink作为[流处理框架](https://data-arti
   2. **实现方式（Implementation）**：Checkpoints和Savepoints在实现方式上也是不同的。Checkpoints被设计成轻量级、快速的。它们可能（并不是必须）使用后端保存状态的不同特性，来使得保存数据是尽可能快。举例来说，使用RocksDB作为增量Checkpoints后端状态存储时使用了RocksDB的内部格式而不是使用Flink原生的格式。这是用来加速RocksDB完成检查点处理的，使之成为更轻量的检查点机制的实例。与之相反，Savepoints设计时更多聚焦在数据的移植性上，支持对作业做出的所有更改，这使得产生和存储时保存点时的开销要稍大一些。
    3. **生命周期（Lifecycle）**：Checkpoints是自动（automatic）且定期（periodic）的。它们由Flink拥有、创建并自动定期地删除，而不需要用户的任何交互，确保在作业异常失败时可以完全恢复（full recovery）。相反，Savepoints由用户拥有并手动管理（即，调度、创建、删除）。
 
-![savepoints, checkpoints, Apache Flink, Flink, ](./pics/infographic-3-differences-between-savepoints-and-checkpoints-in-Flink-232x300.png)
+![savepoints, checkpoints, Apache Flink, Flink, ](./pics/infographic-3-differences-between-savepoints-and-checkpoints-in-Flink-426x550@2x.png)
 
 ## 在流应用中何时使用Savepoints？
 
