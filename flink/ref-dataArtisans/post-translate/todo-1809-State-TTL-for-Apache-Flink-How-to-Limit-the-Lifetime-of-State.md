@@ -4,8 +4,12 @@
 
 [September 25, 2018](https://data-artisans.com/blog/2018/09/25) - [Apache Flink](https://data-artisans.com/blog/category/apache-flink) , [Flink Features](https://data-artisans.com/blog/category/flink-features)
 [Andrey Zagrebin](https://data-artisans.com/blog/author/andrey-zagrebin) and [Fabian Hueske](https://data-artisans.com/blog/author/fabian)
+
 A common requirement for many stateful streaming applications is the ability to control how long application state can be accessed (e.g., due to legal regulations like GDPR) and when to discard it. This blog post introduces the state time-to-live (TTL) feature that was added to Apache Flink with the [1.6.0 release](https://data-artisans.com/blog/apache-flink-1-6-0-whats-new-in-the-latest-apache-flink-release) .
+
 We outline the motivation and discuss use cases for the new State TTL feature. Moreover, we show how to use and configure it and explain how Flink internally manages state with TTL. The blog post concludes with an outlook on future improvements and extensions.
+
+
 
  ![](./pics/0cbea3a6-8bc8-42a6-b4bb-53c02c032e2f)
 
