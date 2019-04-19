@@ -41,19 +41,22 @@ The [1.6.0 release of Apache Flink](https://data-artisans.com/blog/apache-flink-
 
  In Flink’s DataStream API, application state is defined by a [state descriptor](https://ci.apache.org/projects/flink/flink-docs-release-1.6/dev/stream/state/state.html#using-managed-keyed-state) . State TTL is configured by passing a StateTtlConfiguration to a state descriptor. The following **Java example** shows how to create a state TTL configuration and provide it to the state descriptor that holds the last login time of a user as a Long value:
 
+``` java
 import org.apache.flink.api.common.state.StateTtlConfig;
- import org.apache.flink.api.common.time.Time; import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 StateTtlConfig ttlConfig = StateTtlConfig
   .newBuilder(Time.days( 7 ))
   .setUpdateType(StateTtlConfig.UpdateType.OnCreateAndWrite)
   .setStateVisibility(StateTtlConfig.StateVisibility.NeverReturnExpired)
   .build();
 
- ValueStateDescriptor<Long> lastUserLogin =
+ValueStateDescriptor<Long> lastUserLogin =
      new ValueStateDescriptor<>( "lastUserLogin" , Long.class);
 lastUserLogin.enableTimeToLive(ttlConfig);
-Flink provides multiple options to configure the behavior of the state TTL functionality.
+```
 
+Flink provides multiple options to configure the behavior of the state TTL functionality.
  - **When is the Time-to-Live reset?**
  By default, the expiration time of a state entry is updated when the state is modified. Optionally, It can also be updated on read access at the cost of an additional write operation to update the timestamp.
  - **Which time semantics are used for the Time-to-Live timers?**
@@ -77,10 +80,12 @@ When a state object is accessed in a read operation, Flink will check its timest
 
  Flink 1.6.0 supports automatic eviction of the expired state only when a full snapshot for a checkpoint or savepoint is taken. Note that state eviction is not applied for incremental checkpoints. State eviction on full snapshots must be explicitly enabled as shown in the following example:
 
+```java
  StateTtlConfig ttlConfig = StateTtlConfig
   .newBuilder(Time.days( 7 ))
   .cleanupFullSnapshot()
   .build();
+```
 
  The local storage stays untouched at the moment but the size of the stored snapshot is reduced. The local state of an operator will only be cleaned up, when the operator reloads its state from a snapshot, i.e., in case of a recovery or when starting from a savepoint. In the future, this cleanup strategy can be improved to asynchronously propagate state removal to the running local storage.
 
